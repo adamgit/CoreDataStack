@@ -80,13 +80,13 @@ static NSMutableDictionary* dataStacksByFilename;
     return self;
 }
 
-- (id)initWithinitWithDBFilename:(NSString*) dbfn
+- (id)initWithDBFilename:(NSString*) dbfn
 {
-    return [self initWithinitWithDBFilename:dbfn storeType:CDSStoreTypeUnknown];
+    return [self initWithDBFilename:dbfn storeType:CDSStoreTypeUnknown];
 }
 
 
-- (id)initWithinitWithDBFilename:(NSString*) dbfn storeType:(CDSStoreType) type
+- (id)initWithDBFilename:(NSString*) dbfn storeType:(CDSStoreType) type
 {
     self = [super init];
     if (self) {
@@ -135,7 +135,12 @@ static NSMutableDictionary* dataStacksByFilename;
 		{
 			case CDSStoreTypeXML:
 			{
+#ifdef NSXMLStoreType
 				storeType = NSXMLStoreType;
+#else
+				NSAssert( FALSE, @"Apple does not allow you to use an XML store on this OS. Only available on OS X" );
+#endif
+					
 			}break;
 				
 			case CDSStoreTypeBinary:
