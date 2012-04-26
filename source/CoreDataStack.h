@@ -25,13 +25,13 @@ typedef enum CDSStoreType
 
 /*! The actual URL that's in use - you can pass this to init, or let the CoreDataStack work it out automatically */
 @property(nonatomic,retain) NSURL* databaseURL;
-/*! If you init'd using just the model name, then this will have the name you used, otherwise nil */
-@property(nonatomic,retain) NSString* databaseFilenameOrNil;
+/*! Name of the model file in Xcode, with no extension - e.g. for "Model.xcdatamodeld", this is "Model" */
+@property(nonatomic,retain) NSString* modelName;
 /*! Apple's source code is weak and crashes if you don't tell it the correct 'type' of CoreData store. This class will try to guess it for you - or you can explicitly set it during or after init */
 @property(nonatomic) CDSStoreType coreDataStoreType;
 
 /*! To use CoreData, you need to provide a permanent filename for it to save its sqlite DB to disk - or provide a manual URL to where
- you've already saved it.
+ you've already saved it. You also need to provide a model name
  
  I recommend "MyModelName.sqlite" as a name
  
@@ -44,13 +44,13 @@ typedef enum CDSStoreType
  firstStack = [CoreDataStack coreDataStackWithDatabaseFilename: @"MyModel"];
  secondStack = [CoreDataStack coreDataStackWithDatabaseURL: firstStack.databaseURL]; // uses the same config data, but is NOT shared
  */
-+(CoreDataStack*) coreDataStackWithDatabaseFilename:(NSString*) dbfn;
++(CoreDataStack*) coreDataStackWithModelName:(NSString*) mname;
 /*! To use CoreData, you need to provide a permanent filename for it to save its sqlite DB to disk - or provide a manual URL to where
  you've already saved it.
  */
-+(CoreDataStack*) coreDataStackWithDatabaseURL:(NSURL*) dburl;
++(CoreDataStack*) coreDataStackWithDatabaseURL:(NSURL*) dburl modelName:(NSString*) mname;
 
-- (id)initWithURL:(NSURL*) url;
+- (id)initWithURL:(NSURL*) url modelName:(NSString *)mname storeType:(CDSStoreType) type;
 
 -(NSManagedObjectModel*) dataModel;
 -(NSPersistentStoreCoordinator*) persistentStorceCoordinator;

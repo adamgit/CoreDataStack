@@ -6,35 +6,39 @@
 
 #import "CoreDataStack.h"
 
+@interface CoreDataStack()
++ (NSURL *)applicationDocumentsDirectory;
+@end
+
 @implementation CoreDataStack
 
 @synthesize databaseURL;
-@synthesize databaseFilenameOrNil;
+@synthesize modelName;
 @synthesize coreDataStoreType;
 
 static NSMutableDictionary* dataStacksByFilename;
 
-+(CoreDataStack*) coreDataStackWithDatabaseFilename:(NSString*) dbfn
++(CoreDataStack*) coreDataStackWithModelName:(NSString *)mname
 {
 	if( dataStacksByFilename == nil )
 	{
 		dataStacksByFilename = [NSMutableDictionary new];
 	}
 	
-	CoreDataStack* cds = [dataStacksByFilename valueForKey:dbfn];
+	CoreDataStack* cds = [dataStacksByFilename valueForKey:mname];
 	
 	if( cds == nil )
 	{
-		cds = [[[CoreDataStack alloc] initWithDBFilename:dbfn] autorelease];
-		[dataStacksByFilename setValue:cds forKey:dbfn];
+		cds = [[[CoreDataStack alloc] initWithURL:[[self applicationDocumentsDirectory] URLByAppendingPathComponent:mname] modelName:mname storeType:CDSStoreTypeUnknown] autorelease];
+		[dataStacksByFilename setValue:cds forKey:mname];
 	}
 	
 	return cds;
 }
 
-+(CoreDataStack*) coreDataStackWithDatabaseURL:(NSURL*) dburl
++(CoreDataStack*) coreDataStackWithDatabaseURL:(NSURL*) dburl modelName:(NSString *)mname
 {	
-	CoreDataStack* cds = [[[CoreDataStack alloc] initWithURL:dburl] autorelease];
+	CoreDataStack* cds = [[[CoreDataStack alloc] initWithURL:dburl modelName:mname storeType:CDSStoreTypeUnknown] autorelease];
 	
 	return cds;
 }
@@ -65,12 +69,13 @@ static NSMutableDictionary* dataStacksByFilename;
 	}
 }
 
-- (id)initWithURL:(NSURL*) url
+- (id)initWithURL:(NSURL*) url modelName:(NSString *)mname storeType:(CDSStoreType) type
 {
     self = [super init];
     if (self) {
         self.databaseURL = url;
-		self.coreDataStoreType = CDSStoreTypeUnknown;
+		self.modelName = mname;
+		self.coreDataStoreType = type;
 		
 		if( self.coreDataStoreType == CDSStoreTypeUnknown )
 		{
@@ -80,33 +85,11 @@ static NSMutableDictionary* dataStacksByFilename;
     return self;
 }
 
-- (id)initWithDBFilename:(NSString*) dbfn
-{
-    return [self initWithDBFilename:dbfn storeType:CDSStoreTypeUnknown];
-}
-
-
-- (id)initWithDBFilename:(NSString*) dbfn storeType:(CDSStoreType) type
-{
-    self = [super init];
-    if (self) {
-		self.coreDataStoreType = type;
-		self.databaseFilenameOrNil = dbfn;
-        self.databaseURL = [[self applicationDocumentsDirectory] URLByAppendingPathComponent:self.databaseFilenameOrNil];
-		
-		if( self.coreDataStoreType == CDSStoreTypeUnknown )
-		{
-			[self guessStoreType:[self.databaseFilenameOrNil pathExtension]];
-		}
-    }
-    return self;
-}
-
 -(NSManagedObjectModel*) dataModel
 {
 	if( _mom == nil )
 	{
-		NSString* momdPath = [[NSBundle mainBundle] pathForResource:@"ScrumProject" ofType:@"momd"];
+		NSString* momdPath = [[NSBundle mainBundle] pathForResource:self.modelName ofType:@"momd"];
 		NSURL* momdURL = [NSURL fileURLWithPath:momdPath];
 		
 		_mom = [[NSManagedObjectModel alloc] initWithContentsOfURL:momdURL];
@@ -118,7 +101,7 @@ static NSMutableDictionary* dataStacksByFilename;
 /**
  Returns the URL to the application's Documents directory.
  */
-- (NSURL *)applicationDocumentsDirectory {
++ (NSURL *)applicationDocumentsDirectory {
     return [[[NSFileManager defaultManager] URLsForDirectory:NSDocumentDirectory inDomains:NSUserDomainMask] lastObject];
 }
 
