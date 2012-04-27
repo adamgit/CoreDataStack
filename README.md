@@ -46,7 +46,7 @@ Apple makes this difficult, but we make it easy again. All you need to know is t
 
 Given the name, you do:
 
-CoreDataStack* stack = [CoreDataStack coreDataStackWithDatabaseFilename:@"My_Model_Name"]];
+CoreDataStack* stack = [CoreDataStack coreDataStackWithModelName:@"My_Model_Name"]];
 
 Then, everytime CoreData needs a "ManagedObjectContext" instance, you just pass it:
 
