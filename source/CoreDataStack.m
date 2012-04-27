@@ -105,7 +105,7 @@ static NSMutableDictionary* dataStacksByFilename;
     return [[[NSFileManager defaultManager] URLsForDirectory:NSDocumentDirectory inDomains:NSUserDomainMask] lastObject];
 }
 
--(NSPersistentStoreCoordinator*) persistentStorceCoordinator
+-(NSPersistentStoreCoordinator*) persistentStoreCoordinator
 {
 	if( _psc == nil )
 	{
@@ -164,7 +164,7 @@ static NSMutableDictionary* dataStacksByFilename;
 	if( _moc == nil )
 	{
 		_moc = [[NSManagedObjectContext alloc] init];
-		[_moc setPersistentStoreCoordinator:[self persistentStorceCoordinator]];
+		[_moc setPersistentStoreCoordinator:[self persistentStoreCoordinator]];
 	}
 	
 	return _moc;
@@ -187,6 +187,17 @@ static NSMutableDictionary* dataStacksByFilename;
 		{
 			blockFailedToSave( error );
 		}
+	}
+}
+
+-(void) wipeAllData
+{
+	for( NSPersistentStore* store in [self.persistentStoreCoordinator persistentStores] )
+	{
+		NSError *error;
+		NSURL *storeURL = store.URL;
+		[self.persistentStoreCoordinator removePersistentStore:store error:&error];
+		[[NSFileManager defaultManager] removeItemAtPath:storeURL.path error:&error];
 	}
 }
 

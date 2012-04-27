@@ -53,12 +53,15 @@ typedef enum CDSStoreType
 - (id)initWithURL:(NSURL*) url modelName:(NSString *)mname storeType:(CDSStoreType) type;
 
 -(NSManagedObjectModel*) dataModel;
--(NSPersistentStoreCoordinator*) persistentStorceCoordinator;
+-(NSPersistentStoreCoordinator*) persistentStoreCoordinator;
 -(NSManagedObjectContext*) managedObjectContext;
 
 #pragma mark - essential methods that Apple forgot to provide
 
 /*! Apple's implementation of CoreData doesn't support Blocks. How sad. Let's fix that for them! */
 -(void) saveOrFail:(void(^)(NSError* errorOrNil)) blockFailedToSave;
+
+/*! Deletes all data from your CoreData store */
+-(void) wipeAllData;
 
 @end
