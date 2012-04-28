@@ -7,6 +7,7 @@
 
 #import <CoreData/CoreData.h>
 
+#define kNotificationDestroyAllNSFetchedResultsControllers @"DestroyAllNSFetchedResultsControllers"
 typedef enum CDSStoreType
 {
 	CDSStoreTypeUnknown,
@@ -61,7 +62,37 @@ typedef enum CDSStoreType
 /*! Apple's implementation of CoreData doesn't support Blocks. How sad. Let's fix that for them! */
 -(void) saveOrFail:(void(^)(NSError* errorOrNil)) blockFailedToSave;
 
-/*! Deletes all data from your CoreData store */
+/*! Deletes all data from your CoreData store - this is a very fast (and allegedly safe) way
+ of resetting your data to a "virginal" state, as if your app had just been installed for the
+ first time.
+ 
+ It is ALMOST CERTAINLY not safe to call from a multithreaded environment, because nothing in
+ Apple's code is threadsafe. But you already knew that, right?
+ 
+ c.f. http://stackoverflow.com/questions/1077810/delete-reset-all-entries-in-core-data
+ 
+ ALSO ... side effect: all NSFetchedResultsController's will explode. As of iOS 5.1, NSFetchedResultsController is
+ still an inherently buggy class, and I'd recommend avoid using it if you possibly can. To make this slightly
+ less painful, we'll post an NSNotificaiton that you can listen for inside your own NSFetchedResultsController
+ subclasses, and re-build your NSFetchedResultsController when you receive one.
+ 
+ Easy way: use this code as your init method for your NSFetchedResultsController subclass
+ 
+ -(id)initWithCoder:(NSCoder *)aDecoder
+ {
+   self = [super initWithCoder:aDecoder];
+   if (self) {
+   // Custom initialization
+     
+     [[NSNotificationCenter defaultCenter] addObserverForName:kNotificationDestroyAllNSFetchedResultsControllers object:nil queue:nil usingBlock:^(NSNotification *note) {
+     NSLog(@"[%@] must destroy my nsfetchedresultscontroller", [self class]);
+     [__fetchedResultsController release];
+     __fetchedResultsController = nil;
+     }];
+   }
+   return self;
+ }
+ */
 -(void) wipeAllData;
 
 @end

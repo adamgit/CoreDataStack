@@ -198,6 +198,12 @@ static NSMutableDictionary* dataStacksByFilename;
 		NSURL *storeURL = store.URL;
 		[self.persistentStoreCoordinator removePersistentStore:store error:&error];
 		[[NSFileManager defaultManager] removeItemAtPath:storeURL.path error:&error];
+		_moc = nil;
+		_mom = nil;
+		_psc = nil;
+		
+		/** ... side effect: all NSFetchedResultsController's will now explode because Apple didn't code them very well */
+		[[NSNotificationCenter defaultCenter] postNotificationName:kNotificationDestroyAllNSFetchedResultsControllers object:self];
 	}
 }
 
