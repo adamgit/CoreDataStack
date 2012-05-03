@@ -47,6 +47,9 @@ typedef enum CDSStoreType
  */
 +(CoreDataStack*) coreDataStackWithModelName:(NSString*) mname;
 /*! To use CoreData, you need to provide a permanent filename for it to save its sqlite DB to disk - or provide a manual URL to where
+ you've already saved it. */
++(CoreDataStack*) coreDataStackWithModelName:(NSString *)mname databaseFilename:(NSString*) dbname;
+/*! To use CoreData, you need to provide a permanent filename for it to save its sqlite DB to disk - or provide a manual URL to where
  you've already saved it.
  */
 +(CoreDataStack*) coreDataStackWithDatabaseURL:(NSURL*) dburl modelName:(NSString*) mname;

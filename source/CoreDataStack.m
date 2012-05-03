@@ -16,24 +16,25 @@
 @synthesize modelName;
 @synthesize coreDataStoreType;
 
-static NSMutableDictionary* dataStacksByFilename;
++(CoreDataStack*) coreDataStackWithModelName:(NSString *)mname databaseFilename:(NSString*) dbname
+{
+	NSURL *storeURL;
+	
+	if( dbname != nil )
+		storeURL = [[self applicationDocumentsDirectory] URLByAppendingPathComponent:dbname];
+	else
+		storeURL = [[self applicationDocumentsDirectory] URLByAppendingPathComponent:mname];
+	
+	CoreDataStack* cds = [[[CoreDataStack alloc] initWithURL: storeURL
+												   modelName: mname
+												   storeType: CDSStoreTypeUnknown] autorelease];
+	
+	return cds;
+}
 
 +(CoreDataStack*) coreDataStackWithModelName:(NSString *)mname
 {
-	if( dataStacksByFilename == nil )
-	{
-		dataStacksByFilename = [NSMutableDictionary new];
-	}
-	
-	CoreDataStack* cds = [dataStacksByFilename valueForKey:mname];
-	
-	if( cds == nil )
-	{
-		cds = [[[CoreDataStack alloc] initWithURL:[[self applicationDocumentsDirectory] URLByAppendingPathComponent:mname] modelName:mname storeType:CDSStoreTypeUnknown] autorelease];
-		[dataStacksByFilename setValue:cds forKey:mname];
-	}
-	
-	return cds;
+	return [self coreDataStackWithModelName:mname databaseFilename:nil];
 }
 
 +(CoreDataStack*) coreDataStackWithDatabaseURL:(NSURL*) dburl modelName:(NSString *)mname
