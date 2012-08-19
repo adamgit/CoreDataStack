@@ -31,6 +31,9 @@ typedef enum CDSStoreType
 /*! Apple's source code is weak and crashes if you don't tell it the correct 'type' of CoreData store. This class will try to guess it for you - or you can explicitly set it during or after init */
 @property(nonatomic) CDSStoreType coreDataStoreType;
 
+/*! 99.999% of all projects need this set to "TRUE", but Apple's code defaults to FALSE */
+@property(nonatomic) BOOL automaticallyMigratePreviousCoreData;
+
 /*! To use CoreData, you need to provide a permanent filename for it to save its sqlite DB to disk - or provide a manual URL to where
  you've already saved it. You also need to provide a model name
  

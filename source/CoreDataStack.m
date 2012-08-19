@@ -15,6 +15,7 @@
 @synthesize databaseURL;
 @synthesize modelName;
 @synthesize coreDataStoreType;
+@synthesize automaticallyMigratePreviousCoreData;
 
 +(CoreDataStack*) coreDataStackWithModelName:(NSString *)mname databaseFilename:(NSString*) dbname
 {
@@ -77,6 +78,7 @@
         self.databaseURL = url;
 		self.modelName = mname;
 		self.coreDataStoreType = type;
+		self.automaticallyMigratePreviousCoreData = TRUE;
 		
 		if( self.coreDataStoreType == CDSStoreTypeUnknown )
 		{
@@ -148,7 +150,17 @@
 				storeType = NSInMemoryStoreType;
 			}break;
 		}
-		if (![_psc addPersistentStoreWithType:storeType configuration:nil URL:self.databaseURL options:nil error:&error]) {
+		
+		NSDictionary *options = nil;
+		
+		if( self.automaticallyMigratePreviousCoreData )
+		{
+			options = [NSDictionary dictionaryWithObjectsAndKeys:
+								 [NSNumber numberWithBool:YES],NSMigratePersistentStoresAutomaticallyOption,
+								 [NSNumber numberWithBool:YES], NSInferMappingModelAutomaticallyOption, nil];
+		}
+			
+		if (![_psc addPersistentStoreWithType:storeType configuration:nil URL:self.databaseURL options:options error:&error]) {
 			/*
 			 Replace this implementation with code to handle the error appropriately.			 
 			 */
