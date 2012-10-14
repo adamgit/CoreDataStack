@@ -1,7 +1,9 @@
 CoreDataStack
 =============
 
-Simple classes to make Apple&#39;s Core Data usable for normal human beings
+Simple classes to make Apple&#39;s Core Data usable for normal human beings...
+
+...WITHOUT CHANGING the way CoreData works (i.e. this is not a "framework" - it's just a very thin wrapper to do the code that Xcode "New Project" template should have done in the first place.
 
 Core Data is very easy to use - unless you follow Apple's source examples (which are nothing like real-world examples).
 
