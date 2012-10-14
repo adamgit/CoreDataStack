@@ -7,7 +7,7 @@ Simple classes to make Apple&#39;s Core Data usable for normal human beings...
 
 Core Data is very easy to use - unless you follow Apple's source examples (which are nothing like real-world examples).
 
-Apple's bad examples / bad practices
+We fix: Xcode's bad examples / bad practices
 =====
 
 1. Xcode's default template for "a CoreData enabled app" puts 300 lines of INCORRECT, UNNECESSARY code into your Project.
@@ -49,19 +49,19 @@ Apple makes this difficult, but we make it easy again. All you need to know is t
 
 Given the name, you do:
 
-CoreDataStack* stack = [CoreDataStack coreDataStackWithModelName:@"My_Model_Name"]];
+     CoreDataStack* stack = [CoreDataStack coreDataStackWithModelName:@"My_Model_Name"]];
 
 Then, everytime CoreData needs a "ManagedObjectContext" instance, you just pass it:
 
-stack.managedObjectContext
+     stack.managedObjectContext
 
 e.g.:
 
-NSEntityDescription* entityDesc = [NSEntityDescription entityForName:@"MyFirstEntity" inManagedObjectContext:stack.managedObjectContext];
+     NSEntityDescription* entityDesc = [NSEntityDescription entityForName:@"MyFirstEntity" inManagedObjectContext:stack.managedObjectContext];
 
 ...or, better, because the line above is BAD PRACTICE (even though Apple uses it in their source examples), use:
 
-NSEntityDescription* entityDesc = [stack entityForClass:[MyFirstEntity class]];
+     NSEntityDescription* entityDesc = [stack entityForClass:[MyFirstEntity class]];
 
 NB: if you use Apple's version, which takes an NSString, then refactoring in Xcode *will NOT work!* and any small typo will NOT be detected by the compiler - your app will instead crash at runtime. So ... don't pass in an NSString, pass in the class you want instantiated.
 
