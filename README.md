@@ -3,13 +3,14 @@ CoreDataStack
 
 Simple classes to make Apple&#39;s Core Data usable for normal human beings
 
-Apple makes it INCREDIBLY DIFFICULT to do common simple things with CoreData. Apple's default template for "a CoreData enabled app" puts 300 lines of crap into your Project.
+Core Data is very easy to use - unless you follow Apple's source examples (which are nothing like real-world examples).
 
-Worse, Apple puts it all into AppDelegate - the worst possible place for this code.
+Apple's bad examples / bad practices
+=====
 
-EVEN WORSE, Apple's sample code forces you to have ONLY ONE CORE DATA MODEL open at a time. This is EXTREMELY BAD programming practice and leads to MANY BROKEN APPS AND SOURCE PROJECTS.
-
-(multi-threaded CoreData is extremely difficult, because Apple implemented CoreData badly - but if you use multiple models in parallel, everything is threadsafe automatically. Instead of learning the difficult MT model for CoreData, just use multiple models!)
+1. Xcode's default template for "a CoreData enabled app" puts 300 lines of INCORRECT, UNNECESSARY code into your Project.
+2. Xcode puts it all into AppDelegate - the worst possible place for this code.
+3. Apple's sample code forces you to have ONLY ONE CORE DATA MODEL open at a time. This is very, very bad: most CoreData projects would be ten times easier to write and debug if they used multiple models. They would also run faster. But if you start with Apple's template, you cannot do this. CoreData was not designed to be used that way!
 
 So, this simple library turns CoreData from:
 
@@ -55,5 +56,11 @@ stack.managedObjectContext
 e.g.:
 
 NSEntityDescription* entityDesc = [NSEntityDescription entityForName:@"MyFirstEntity" inManagedObjectContext:stack.managedObjectContext];
+
+...or, better, because the line above is BAD PRACTICE (even though Apple uses it in their source examples), use:
+
+NSEntityDescription* entityDesc = [stack entityForClass:[MyFirstEntity class]];
+
+NB: if you use Apple's version, which takes an NSString, then refactoring in Xcode *will NOT work!* and any small typo will NOT be detected by the compiler - your app will instead crash at runtime. So ... don't pass in an NSString, pass in the class you want instantiated.
 
 Easy!
