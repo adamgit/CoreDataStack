@@ -68,6 +68,21 @@ typedef enum CDSStoreType
 /*! Apple's implementation of CoreData doesn't support Blocks. How sad. Let's fix that for them! */
 -(void) saveOrFail:(void(^)(NSError* errorOrNil)) blockFailedToSave;
 
+/** Shorthand for Apple's clunky, overly-verbose method:
+ 
+ [NSEntityDescription entityForName: inManagedObjectContext:]
+ 
+ NB: Apple uses an NSString argument; you should never use a string argument! Very unsafe code, very bad practice. There's good reason for allowing String
+ argument here (it enables CoreData to work with classes that it doesn't actually have the class file) but that's a very rare case for most projects.
+ 
+ ...instead, call this method for an entity named e.g. Entity (Apple's default entity name):
+ 
+     "[stack entityForClass:[Entity class]];"
+ 
+ NB: Obviously, this implementation automatically uses the stack's current NSManagedObjectContext as the final argument - anything else wouldn't make sense
+ */
+-(NSEntityDescription*) entityForClass:(Class) entityClass;
+  
 /*! Deletes all data from your CoreData store - this is a very fast (and allegedly safe) way
  of resetting your data to a "virginal" state, as if your app had just been installed for the
  first time.

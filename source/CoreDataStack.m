@@ -101,6 +101,13 @@
 	return _mom;
 }
 
+-(NSEntityDescription*) entityForClass:(Class) entityClass
+{
+	NSEntityDescription* result = [NSEntityDescription entityForName:NSStringFromClass(entityClass) inManagedObjectContext:self.managedObjectContext];
+	
+	return result;
+}
+
 /**
  Returns the URL to the application's Documents directory.
  */
