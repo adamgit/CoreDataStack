@@ -17,6 +17,30 @@
 @synthesize coreDataStoreType;
 @synthesize automaticallyMigratePreviousCoreData;
 
++(NSString*) sharedNameForModelName:(NSString*) mname dbName:(NSString*) dbname
+{
+	return [NSString stringWithFormat:@"%@+%@", mname, dbname];
+}
+
++(CoreDataStack*) coreDataStackWithSharedModelName:(NSString *)mname databaseFilename:(NSString*) dbname
+{
+	static NSMutableDictionary* sharedModelsByNameANdDBName;
+	
+	if( sharedModelsByNameANdDBName == nil )
+	{
+		sharedModelsByNameANdDBName = [NSMutableDictionary new];
+	}
+	
+	CoreDataStack* sharedStack = [sharedModelsByNameANdDBName objectForKey:[self sharedNameForModelName:mname dbName:dbname]];
+	if( sharedStack == nil )
+	{
+		sharedStack = [self coreDataStackWithModelName:mname databaseFilename:dbname];
+		[sharedModelsByNameANdDBName setObject:sharedStack forKey:[self sharedNameForModelName:mname dbName:dbname]];
+	}
+	
+	return sharedStack;
+}
+
 +(CoreDataStack*) coreDataStackWithModelName:(NSString *)mname databaseFilename:(NSString*) dbname
 {
 	NSURL *storeURL;
