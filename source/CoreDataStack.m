@@ -214,6 +214,19 @@
 	return _moc;
 }
 
+#pragma mark - Convenience methods that can be implemented generically on top of any coredata stack
+
+-(BOOL) storeContainsAtLeastOneEntityOfClass:(Class) c
+{
+	NSFetchRequest* fetchAny = [NSFetchRequest fetchRequestWithEntityName:NSStringFromClass(c)];
+	NSArray* anyCats = [self.managedObjectContext executeFetchRequest:fetchAny error:nil];
+	
+	if( [anyCats count] > 0 )
+		return TRUE;
+	
+	return FALSE;
+}
+
 -(void) saveOrFail:(void(^)(NSError* errorOrNil)) blockFailedToSave
 {
 	NSError* error = nil;

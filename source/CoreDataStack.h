@@ -70,6 +70,9 @@ typedef enum CDSStoreType
 
 #pragma mark - essential methods that Apple forgot to provide
 
+/*! Useful method that MOST APPS need, to check instantly whether they've been initialized with this CD store before */
+-(BOOL) storeContainsAtLeastOneEntityOfClass:(Class) c;
+
 /*! Apple's implementation of CoreData doesn't support Blocks. How sad. Let's fix that for them! */
 -(void) saveOrFail:(void(^)(NSError* errorOrNil)) blockFailedToSave;
 
