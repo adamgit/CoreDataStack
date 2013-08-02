@@ -8,7 +8,7 @@
 
 @interface CoreDataStack()
 + (NSURL *)applicationDocumentsDirectory;
-@property(nonatomic,retain,readwrite) NSThread* threadThatOwnsThisStack;
+@property(nonatomic,assign,readwrite) NSThread* threadThatOwnsThisStack;
 @end
 
 @implementation CoreDataStack
