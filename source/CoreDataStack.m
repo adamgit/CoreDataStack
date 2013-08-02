@@ -8,19 +8,26 @@
 
 @interface CoreDataStack()
 + (NSURL *)applicationDocumentsDirectory;
+@property(nonatomic,retain,readwrite) NSThread* threadThatOwnsThisStack;
 @end
 
 @implementation CoreDataStack
+
+#pragma mark - @synthesize for old Xcode versions (pre Xcode 4.4)
 
 @synthesize databaseURL;
 @synthesize modelName;
 @synthesize coreDataStoreType;
 @synthesize automaticallyMigratePreviousCoreData;
 
+#pragma mark - main class
+
 +(NSString*) sharedNameForModelName:(NSString*) mname dbName:(NSString*) dbname
 {
 	return [NSString stringWithFormat:@"%@+%@", mname, dbname];
 }
+
+#pragma mark - Initializers / Constructors
 
 +(CoreDataStack*) coreDataStackWithSharedModelName:(NSString *)mname databaseFilename:(NSString*) dbname
 {
@@ -112,12 +119,78 @@
     return self;
 }
 
+- (void)dealloc
+{
+    self.threadThatOwnsThisStack = nil;
+	self.databaseURL = nil;
+	self.modelName = nil;
+	
+    [super dealloc];
+}
+
+#pragma mark - Apple core objects / references
+
 -(NSManagedObjectModel*) dataModel
 {
 	if( _mom == nil )
 	{
-		NSString* momdPath = [[NSBundle mainBundle] pathForResource:self.modelName ofType:@"momd"];
-		NSURL* momdURL = [NSURL fileURLWithPath:momdPath];
+		NSString* momdPath = [[NSBundle mainBundle]pathForResource:self.modelName ofType:@"momd"];
+		NSURL* momdURL = nil;
+		
+		/**
+		 New feature: WHEREVER your MOMD file is hiding, we'll find it!
+		 
+		 Problem: When you embed a CoreData project (e.g. a static library) inside another project (e.g. your app),
+		 Apple has banned us all from using Frameworks (even though Apple prefers us to write frameworks on OS X,
+		 they disabled them from Xcode when making iOS apps).
+		 
+		 You're supposed to attach multiple NSBundle's to your app - one for each
+		 subproject.
+		 
+		 This is great, but ... Apple provides no method to "search ALL bundles to find a file", they only provide
+		 a method to "search the top-level bundle AND IGNORE THE SUB-BUNDLES".
+		 
+		 So, if we fail to find the MOMD we're looking for, we'll look at each sub-bundle we find, and go looking in 
+		 them for it.
+		 */
+#define DEBUG_RECURSIVE_BUNDLE_SEARCHING 0
+		if( momdPath == nil )
+		{
+#if DEBUG_RECURSIVE_BUNDLE_SEARCHING
+			NSLog(@"[%@] WARN: Apple MOMD file was missing from main bundle. Now searching sub-bundles (1 level deep) to find it...", [self class]);
+#endif
+			
+			NSArray* allAppBundles = [NSBundle allBundles];
+#if DEBUG_RECURSIVE_BUNDLE_SEARCHING
+			NSLog( @"[%@] ... found %i potential app bundles that might contain it", [self class], allAppBundles.count);
+#endif
+			for(  NSBundle* appBundle in allAppBundles )
+			{
+				momdURL = [appBundle URLForResource:self.modelName withExtension:@"momd" subdirectory:nil];
+				
+				if( momdURL == nil ) // not found, so check the bundle for sub-bundles
+				{
+					for( NSURL* subURL in [appBundle URLsForResourcesWithExtension:@"bundle" subdirectory:nil])
+					{
+						NSBundle* subBundle = [NSBundle bundleWithURL:subURL];
+						momdURL = [subBundle URLForResource:self.modelName withExtension:@"momd" subdirectory:nil];
+						if( momdURL != nil )
+						{
+							break;
+						}
+					}
+				}
+				
+				if( momdURL != nil )
+				{
+					break;
+				}
+			}
+			
+			NSAssert( momdURL != nil, @"Failed to find the momd file for incoming modelName = %@. Maybe you forgot to convert your MOM to a MOMD? (Xcode major bug: used to do this automatically, now it doesn't)", self.modelName );
+		}
+		else
+			momdURL = [NSURL fileURLWithPath:momdPath];
 		
 		_mom = [[NSManagedObjectModel alloc] initWithContentsOfURL:momdURL];
 	}
@@ -132,8 +205,15 @@
 	return result;
 }
 
+-(NSManagedObject*) insertInstanceOfClass:(Class) entityClass
+{
+	NSManagedObject* newObject = [NSEntityDescription insertNewObjectForEntityForName:NSStringFromClass(entityClass) inManagedObjectContext:self.managedObjectContext];
+	
+	return newObject;
+}
+
 /**
- Returns the URL to the application's Documents directory.
+ Returns the URL to the application's Documents directory. Used by Apple's reference code for finding the CoreData persistent files
  */
 + (NSURL *)applicationDocumentsDirectory {
     return [[[NSFileManager defaultManager] URLsForDirectory:NSDocumentDirectory inDomains:NSUserDomainMask] lastObject];
@@ -156,8 +236,10 @@
 				storeType = NSXMLStoreType;
 #else
 				NSAssert( FALSE, @"Apple does not allow you to use an XML store on this OS. Only available on OS X" );
+				storeType = NSSQLiteStoreType;
+				NSLog(@"[%@] ERROR: impossible store type. This type only exists on OS X. Using SqlLite instead ... %@", [self class], storeType );
 #endif
-					
+				
 			}break;
 				
 			case CDSStoreTypeBinary:
@@ -168,7 +250,7 @@
 			case CDSStoreTypeUnknown:
 			{
 				storeType = NSSQLiteStoreType;
-				NSLog(@"[%@] WARN: unknown store type. Guessing ... %@ ??", [self class], storeType );
+				NSLog(@"[%@] WARN: unknown store type. Guessing ... %@", [self class], storeType );
 			}break;
 				
 			case CDSStoreTypeSQL:
@@ -187,10 +269,12 @@
 		if( self.automaticallyMigratePreviousCoreData )
 		{
 			options = [NSDictionary dictionaryWithObjectsAndKeys:
-								 [NSNumber numberWithBool:YES],NSMigratePersistentStoresAutomaticallyOption,
-								 [NSNumber numberWithBool:YES], NSInferMappingModelAutomaticallyOption, nil];
+					   [NSNumber numberWithBool:YES], NSMigratePersistentStoresAutomaticallyOption,
+					   [NSNumber numberWithBool:YES], NSInferMappingModelAutomaticallyOption, nil];
 		}
-			
+		else
+			NSLog(@"[%@] Warning: not migrating store (Apple default, but it's incorrect for 99%% of projects)", [self class]);
+		
 		if (![_psc addPersistentStoreWithType:storeType configuration:nil URL:self.databaseURL options:options error:&error]) {
 			/*
 			 Replace this implementation with code to handle the error appropriately.			 
@@ -203,12 +287,31 @@
 	return _psc;
 }
 
+/**
+ NB: all internal methods route via this method; this way, we can centrally check that you're not
+ doing dangerous multi-threaded CoreData, and Assert if we catch you doing it
+ 
+ NB: We "Assert" in this method because it is ALWAYS WRONG to do multi-threaded access against CoreData
+ (apart from niche uses that are so specialized - and so hard to get right - that you won't see them
+ on normal app projects)
+ */
 -(NSManagedObjectContext*) managedObjectContext
 {
 	if( _moc == nil )
 	{
 		_moc = [[NSManagedObjectContext alloc] init];
 		[_moc setPersistentStoreCoordinator:[self persistentStoreCoordinator]];
+		
+		NSLog(@"[%@] Info: Created a new NSManagedObjectContext (if you weren't expecting this, this could be fatal to your app", [self class] );
+	}
+	
+	if( self.threadThatOwnsThisStack == nil )
+	{
+		self.threadThatOwnsThisStack = [NSThread currentThread];
+	}
+	else
+	{
+		NSAssert( self.threadThatOwnsThisStack == [NSThread currentThread], @"FATAL ERROR: Apple's CoreData code is very UNSAFE with multithreading; you tried to access CoreData from thread = %@, but this stack was initialized by thread = %@. According to Apple, only the thread that initializes a ManagedObjectContext is allowed to read from or write to it", [NSThread currentThread], self.threadThatOwnsThisStack );
 	}
 	
 	return _moc;
@@ -216,15 +319,84 @@
 
 #pragma mark - Convenience methods that can be implemented generically on top of any coredata stack
 
+-(NSFetchRequest*) fetchRequestForEntity:(Class) c
+{
+	return [NSFetchRequest fetchRequestWithEntityName:NSStringFromClass(c)];
+}
+
+-(NSManagedObject*) fetchOneOrNil:(Class) c predicate:(NSPredicate*) predicate error:(NSError**) error
+{
+	NSFetchRequest* fetch = [self fetchRequestForEntity:c];
+	fetch.predicate = predicate;
+	NSArray* result = [self.managedObjectContext executeFetchRequest:fetch error:error];
+	
+	if( result == nil )
+	{
+		return nil;
+	}
+	else if( result.count != 1 )
+	{
+		if( error != nil )
+			*error = nil; // not an error, but wrong number of matches
+		return nil;
+	}
+	else
+	{
+		if( error != nil )
+			*error = nil;
+		return [result objectAtIndex:0];
+	}
+}
+
 -(BOOL) storeContainsAtLeastOneEntityOfClass:(Class) c
 {
-	NSFetchRequest* fetchAny = [NSFetchRequest fetchRequestWithEntityName:NSStringFromClass(c)];
+	NSFetchRequest* fetchAny = [self fetchRequestForEntity:c];
 	NSArray* anyCats = [self.managedObjectContext executeFetchRequest:fetchAny error:nil];
 	
 	if( [anyCats count] > 0 )
 		return TRUE;
 	
 	return FALSE;
+}
+
+-(NSArray*) fetchEntities:(Class) c matchingPredicate:(NSPredicate*) predicate
+{
+	return [self fetchEntities:c matchingPredicate:predicate sortedByDescriptors:nil];
+}
+
+-(NSArray*) fetchEntities:(Class) c matchingPredicate:(NSPredicate*) predicate sortedByDescriptors:(NSArray*) sortDescriptors
+{
+	NSFetchRequest* fetch = [self fetchRequestForEntity:c];
+	if( predicate != nil )
+		fetch.predicate = predicate;
+	if( sortDescriptors != nil )
+		fetch.sortDescriptors = sortDescriptors;
+	NSError* error;
+	NSArray* result = [self.managedObjectContext executeFetchRequest:fetch error:&error];
+	
+	if( result == nil )
+	{
+		NSLog(@"[%@] ERROR calling fetchEntities:matchingPredicate for predicate %@, error = %@", [self class], predicate, error );
+		return nil;
+	}
+	else
+		return result;
+}
+
+-(int) countEntities:(Class) c matchingPredicate:(NSPredicate*) predicate
+{
+	NSFetchRequest* fetch = [self fetchRequestForEntity:c];
+	fetch.predicate = predicate;
+	NSError* error;
+	NSArray* result = [self.managedObjectContext executeFetchRequest:fetch error:&error];
+	
+	if( result == nil )
+	{
+		NSLog(@"[%@] ERROR calling countEntities:matchingPredicate for predicate %@, error = %@", [self class], predicate, error );
+		return -1;
+	}
+	else
+		return result.count;
 }
 
 -(void) saveOrFail:(void(^)(NSError* errorOrNil)) blockFailedToSave
@@ -243,6 +415,9 @@
 		else
 		{
 			blockFailedToSave( error );
+			
+			if( self.shouldAssertWhenSaveFails )
+				NSAssert( FALSE, @"A CoreData save failed, and you asked me to Assert when this happens. This is a very serious error - you should investigate!");
 		}
 	}
 }
