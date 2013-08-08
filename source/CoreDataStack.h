@@ -71,6 +71,12 @@ typedef enum CDSStoreType
 @property(nonatomic,retain) NSString* modelName;
 /*! Apple crashes if you don't tell it the correct 'type' of CoreData store. This class will try to guess it for you, and seems to get it right - if not, you can explicitly set it during or after init */
 @property(nonatomic) CDSStoreType coreDataStoreType;
+/**
+ Defaults to NSConfinementConcurrencyType (was the only option prior to iOS 5)
+ 
+ Changing this *after* you've generated a MOC (by calling the .managedObjectContext getter) will cause an asertion - you really shouldn't do that
+ */
+@property(nonatomic) NSManagedObjectContextConcurrencyType managedObjectContextConcurrencyType;
 
 /*! Most apps need this set to "TRUE", but Apple defaults to FALSE, so we default to FALSE too */
 @property(nonatomic) BOOL automaticallyMigratePreviousCoreData;

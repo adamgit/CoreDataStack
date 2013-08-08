@@ -115,17 +115,29 @@
 		{
 			[self guessStoreType:[self.databaseURL pathExtension]];
 		}
+		
+		[self addObserver:self forKeyPath:@"managedObjectContextConcurrencyType" options:0 context:nil];
     }
     return self;
 }
 
 - (void)dealloc
 {
+	[self removeObserver:self forKeyPath:@"managedObjectContextConcurrencyType" context:nil];
+	
     self.threadThatOwnsThisStack = nil;
 	self.databaseURL = nil;
 	self.modelName = nil;
 	
     [super dealloc];
+}
+
+-(void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context
+{
+	if( [@"managedObjectContextConcurrencyType" isEqualToString:keyPath])
+	{
+		NSAssert( _moc == nil, @"You cannot change the managedObjectContextConcurrencyType after you've started using the stack (you've already read the value of .managedObjectContext, I'm afraid) - that's going to make your app source code confused and broken and chaos");
+	}
 }
 
 #pragma mark - Apple core objects / references
@@ -299,7 +311,7 @@
 {
 	if( _moc == nil )
 	{
-		_moc = [[NSManagedObjectContext alloc] init];
+		_moc = [[NSManagedObjectContext alloc] initWithConcurrencyType:self.managedObjectContextConcurrencyType];
 		[_moc setPersistentStoreCoordinator:[self persistentStoreCoordinator]];
 		
 		NSLog(@"[%@] Info: Created a new NSManagedObjectContext (if you weren't expecting this, this could be fatal to your app", [self class] );
