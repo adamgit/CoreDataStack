@@ -37,6 +37,10 @@ typedef enum CDSStoreType
 	CDSStoreTypeInMemory
 } CDSStoreType;
 
+@class CoreDataStack;
+
+typedef void (^CoreDataStackErrorHandler)(CoreDataStack* stack, NSError* error);
+
 @interface CoreDataStack : NSObject
 {
 	NSManagedObjectModel* _mom;
@@ -84,6 +88,9 @@ typedef enum CDSStoreType
 /** Very useful when developing an app: make "Failed saves" *immediately* Assert (pause the debugger), so you can quickly debug them,
  instead of silently failing and you not noticing that your in-memory data is corrupt! */
 @property(nonatomic) BOOL shouldAssertWhenSaveFails;
+
+/** add a handler block for errors that could happen in persistent store creation or updating. Called whenever no other error handling block is explicitly passed as parameter to any of this classes methods */
+@property(nonatomic) CoreDataStackErrorHandler defaultErrorBlock;
 
 /*! To use CoreData, you need to provide a permanent filename for it to save its sqlite DB to disk - or provide a manual URL to where
  you've already saved it. You also need to provide a model name

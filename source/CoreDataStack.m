@@ -19,6 +19,7 @@
 @synthesize modelName;
 @synthesize coreDataStoreType;
 @synthesize automaticallyMigratePreviousCoreData;
+@synthesize defaultErrorBlock;
 
 #pragma mark - main class
 
@@ -288,11 +289,12 @@
 			NSLog(@"[%@] Warning: not migrating store (Apple default, but it's incorrect for 99%% of projects)", [self class]);
 		
 		if (![_psc addPersistentStoreWithType:storeType configuration:nil URL:self.databaseURL options:options error:&error]) {
-			/*
-			 Replace this implementation with code to handle the error appropriately.			 
-			 */
-			NSLog(@"[%@] Unresolved error %@, %@", [self class], error, [error userInfo]);
-			abort();
+			if (self.defaultErrorBlock) {
+                self.defaultErrorBlock(self, error);
+            } else {
+                NSLog(@"[%@] Unresolved error %@, %@", [self class], error, [error userInfo]);
+                abort();
+            }
 		}
 	}
 	
@@ -341,7 +343,7 @@
 	NSFetchRequest* fetch = [self fetchRequestForEntity:c];
 	fetch.predicate = predicate;
 	NSArray* result = [self.managedObjectContext executeFetchRequest:fetch error:error];
-	
+    
 	if( result == nil )
 	{
 		return nil;
@@ -363,8 +365,9 @@
 -(BOOL) storeContainsAtLeastOneEntityOfClass:(Class) c
 {
 	NSFetchRequest* fetchAny = [self fetchRequestForEntity:c];
-	NSArray* anyCats = [self.managedObjectContext executeFetchRequest:fetchAny error:nil];
-	
+    NSError* error;
+	NSArray* anyCats = [self.managedObjectContext executeFetchRequest:fetchAny error:&error];
+    if (error && self.defaultErrorBlock) defaultErrorBlock(self, error);
 	if( [anyCats count] > 0 )
 		return TRUE;
 	
@@ -388,6 +391,7 @@
 	
 	if( result == nil )
 	{
+        if (error && self.defaultErrorBlock) defaultErrorBlock(self, error);
 		NSLog(@"[%@] ERROR calling fetchEntities:matchingPredicate for predicate %@, error = %@", [self class], predicate, error );
 		return nil;
 	}
@@ -405,10 +409,11 @@
 	if( result == nil )
 	{
 		NSLog(@"[%@] ERROR calling countEntities:matchingPredicate for predicate %@, error = %@", [self class], predicate, error );
+        if (error && self.defaultErrorBlock) defaultErrorBlock(self, error);
 		return -1;
 	}
 	else
-		return result.count;
+		return (int)result.count;
 }
 
 -(void) saveOrFail:(void(^)(NSError* errorOrNil)) blockFailedToSave
@@ -420,18 +425,33 @@
 	}
 	else
 	{
-		if( [self managedObjectContext] == nil )
-		{
-			blockFailedToSave( [NSError errorWithDomain:@"CoreDataStack" code:1 userInfo:[NSDictionary dictionaryWithObjectsAndKeys:@"Attempted to save a nil NSManagedObjectContext. This CoreDataStack has no context - probably there was an earlier error trying to access the CoreData database file", NSLocalizedDescriptionKey, nil]] );
-		}
-		else
-		{
-			blockFailedToSave( error );
-			
-			if( self.shouldAssertWhenSaveFails )
-				NSAssert( FALSE, @"A CoreData save failed, and you asked me to Assert when this happens. This is a very serious error - you should investigate!");
-		}
-	}
+        if (!blockFailedToSave && self.defaultErrorBlock) {
+            if( [self managedObjectContext] == nil )
+            {
+                self.defaultErrorBlock(self, [NSError errorWithDomain:@"CoreDataStack" code:1 userInfo:[NSDictionary dictionaryWithObjectsAndKeys:@"Attempted to save a nil NSManagedObjectContext. This CoreDataStack has no context - probably there was an earlier error trying to access the CoreData database file", NSLocalizedDescriptionKey, nil]]);
+            }
+            else
+            {
+                self.defaultErrorBlock(self, error);
+                
+                if( self.shouldAssertWhenSaveFails )
+                    NSAssert( FALSE, @"A CoreData save failed, and you asked me to Assert when this happens. This is a very serious error - you should investigate!");
+            }
+
+        } else {
+            if( [self managedObjectContext] == nil )
+            {
+                blockFailedToSave( [NSError errorWithDomain:@"CoreDataStack" code:1 userInfo:[NSDictionary dictionaryWithObjectsAndKeys:@"Attempted to save a nil NSManagedObjectContext. This CoreDataStack has no context - probably there was an earlier error trying to access the CoreData database file", NSLocalizedDescriptionKey, nil]] );
+            }
+            else
+            {
+                blockFailedToSave( error );
+                
+                if( self.shouldAssertWhenSaveFails )
+                    NSAssert( FALSE, @"A CoreData save failed, and you asked me to Assert when this happens. This is a very serious error - you should investigate!");
+            }
+        }
+    }
 }
 
 -(void) wipeAllData
@@ -445,7 +465,9 @@
 		_moc = nil;
 		_mom = nil;
 		_psc = nil;
-		
+        
+		if (error && self.defaultErrorBlock) defaultErrorBlock(self, error);
+        
 		/** ... side effect: all NSFetchedResultsController's will now explode because Apple didn't code them very well */
 		[[NSNotificationCenter defaultCenter] postNotificationName:kNotificationDestroyAllNSFetchedResultsControllers object:self];
 	}
