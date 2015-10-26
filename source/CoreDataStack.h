@@ -294,4 +294,15 @@ typedef void (^CoreDataStackErrorHandler)(CoreDataStack* stack, NSError* error);
  */
 -(void) wipeAllData;
 
+/** remove current database / persistent store and replace with a new one. A backup of the old database will be saved at the same position with appended extension .old
+@param newDatabaseURL the NSURL of the new database / persistent store, pass nil if you want to reset the current persistent store without loading a new database.
+*/
+-(void)replaceDatabaseWithURL:(NSURL*)newDatabaseURL;
+
+/** resets the current database / persistent store. A backup of the old database will be saved at the same position with appended extension .old
+    Convinience method for calling -replaceDatabaseWithURL:nil
+@see replaceDatabaseWithURL:
+*/
+-(void)resetDatabase;
+
 @end

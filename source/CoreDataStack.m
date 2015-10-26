@@ -473,4 +473,47 @@
 	}
 }
 
+-(void)replaceDatabaseWithURL:(NSURL *)newDatabaseURL {
+    [_moc reset];
+    NSError *error;
+    for (NSPersistentStore *store in _psc.persistentStores) {
+        BOOL removed = [_psc removePersistentStore:store error:&error];
+        if (!removed) {
+            NSLog(@"Unable to remove persistent store: %@", error);
+        }
+    }
+    if (newDatabaseURL) {
+        BOOL moved = [[NSFileManager defaultManager] replaceItemAtURL:self.databaseURL
+                                                        withItemAtURL:newDatabaseURL
+                                                       backupItemName:[[self.databaseURL lastPathComponent] stringByAppendingPathExtension:@"old"]
+                                                              options:0
+                                                     resultingItemURL:nil
+                                                                error:&error];
+        if (!moved) {
+            NSLog(@"Unable to move temporary store: %@", error);
+        }
+    } else {
+        [[NSFileManager defaultManager] moveItemAtURL:self.databaseURL toURL:[self.databaseURL URLByAppendingPathExtension:@"old"] error:&error];
+    }
+    
+    NSDictionary* options = nil;
+    if (self.automaticallyMigratePreviousCoreData) {
+        options = @{NSMigratePersistentStoresAutomaticallyOption : @YES,
+                    NSInferMappingModelAutomaticallyOption : @YES
+        };
+    }
+    NSPersistentStore *persistentStore = [_psc addPersistentStoreWithType:NSSQLiteStoreType configuration:nil URL:self.databaseURL options:options error:&error];
+    if (!persistentStore) {
+        NSLog(@"Unable to add new store: %@", error);
+    }
+    [[NSNotificationCenter defaultCenter] postNotificationName:kNotificationDestroyAllNSFetchedResultsControllers object:self];
+    if (error && self.defaultErrorBlock) {
+        self.defaultErrorBlock(self, error);
+    }
+}
+
+-(void)resetDatabase {
+    [self replaceDatabaseWithURL:nil];
+}
+
 @end
