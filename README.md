@@ -1,3 +1,11 @@
+2016 onwards
+============
+
+NOTE: Apple's new NSPersistentContainer has been created to serve most of the purpose that CoreDataStack fulfilled; I strongly advise you try using the Apple class from here on instead of this one.
+
+https://developer.apple.com/library/content/releasenotes/General/WhatNewCoreData2016/ReleaseNotes.html
+
+
 CoreDataStack
 =============
 
